@@ -1,0 +1,75 @@
+.THIS .ahm-table-lineHeight {
+   line-height: 1.175rem;
+}
+
+.THIS .ahm-employeeDivWidth{
+	width: 100%;
+}
+
+.THIS .ahm-Spinner-Background{
+    background-color: rgb(243, 242, 242);
+}
+
+.THIS .ahm-DeleteIconBackgroundColor svg {
+fill: #a6a2a2;
+}
+
+.THIS .ahm-font-size{
+	font-size:.75rem;
+}
+
+.THIS .ahm_badgeColor{
+background-color : rgb(255, 206, 153);
+}
+
+.THIS .ahm-empty-tableBackground {
+    background-color : white;
+}
+.THIS .ahm-activity-name-font {
+	font-size: .90rem;
+	color: black;
+}
+
+
+.THIS .ahm-Popover_body{
+	visibility:hidden;
+	height: 0;
+	z-index : -1;
+	
+}
+.THIS .ahm-popover:hover .ahm-Popover_body{
+	visibility:visible;
+    position:absolute;
+    opacity:1;
+    z-index : 1;
+    transition-delay:0.4s;
+    color:#fff;
+}
+
+.THIS .ahm-popover:hover .ahm-orgUnitNumber-left{
+	left:3%;
+    bottom: 335%;
+}
+
+.THIS .ahm-popover:hover .ahm-badge-bottom{
+	 bottom:238%;
+}
+
+.THIS .ahm-popover:hover .ahm-OrgName-bottom{
+	 bottom:317%;
+}
+.THIS .ahm-popover:hover .ahm-OrgEmpName-bottom{
+	 bottom:327%;
+}
+.THIS .ahm-badge_padding {
+    text-transform : none;
+    padding : .2rem .6rem;
+    color : black;
+    font-size: xx-small;    
+    letter-spacing: normal;  
+    vertical-align: middle;
+}
+
+.THIS .ahm-div-clear {
+	clear:both;
+}

@@ -1,0 +1,354 @@
+<aura:component extends="c:RecordBaseComponent"
+                implements="flexipage:availableForRecordHome,force:hasRecordId"
+                access="global">
+    
+    <!-- RESOURCES  -->
+    <ltng:require scripts="{!join(',', $Resource.CentrisLightningResources + '/js/lodash.js', 
+                           $Resource.CentrisLightningResources + '/js/serviceRequest.js')}"
+                  afterScriptsLoaded="{!c.onScriptsLoaded}"  />
+    <!-- RESOURCES END-->
+    
+    <!-- DEPENDENCY TAGS  -->
+    <!-- DEPENDENCY TAGS END -->
+    
+    
+    <!-- DESIGN ATTRIBUTES START -->
+    <aura:attribute name="addOrganizationUnitActionVisibility" type="String" access="global" default="Show" 
+                    description="Determines whether users are allowed to add an org unit(s)." />
+    <aura:attribute name="deleteOrganizationUnitActionVisibility" type="String" access="global" default="Show" 
+                    description="Determines whether users are allowed to delete an org unit(s)" />
+    <aura:attribute name="manageBudgetOrganizationUnitHelpTextType" type="String" access="global" 
+                    default="Helptext : Manage Budget Access" 
+                    description="Defines the instructional text that will be displayed in the business component." />
+    <aura:attribute name="manageBudgetOrganizationUnitHelpTextVisibility" type="String" access="global" default="Show" 
+                    description="Determine whether the instructional text will be shown in the business component." />
+    
+    <aura:attribute name="searchOrganizationUnitHelpTextType" type="String" access="global" 
+                    default="Helptext : Search Organziation Unit"  /> 
+    <aura:attribute name="searchOrganizationUnitHelpTextVisibility" type="String" access="global" default="Show"  />         
+    <!-- DESIGN ATTRIBUTES END-->
+    
+    <!-- PUBLIC ATTRIBUTES START -->
+    <aura:attribute name="componentName" type="String" default="AlignOrgToBudget"/>
+    <aura:attribute name="showSearchAddOrgUnitModal" type="Boolean" default="false" />
+    <aura:attribute name="searchSettings" type="Object" />
+    <aura:attribute name="alignOrgUnitToBudget" type="Object" />
+    <aura:attribute name="alignOrgUnitToDisplay" type="Object[]" />
+    <aura:attribute name="deleteRecord" type="Object[]"/>
+    <aura:attribute name="recordId" type="String" />
+    <aura:attribute name="budgetId" type="String" />
+    <aura:attribute name="defaultRecordSize" type="integer" default="6" />
+    <aura:attribute name="viewAllOrgUnit" type="Boolean" default="false" />
+    <aura:attribute name="orgUnitFieldsForLabels" type="String[]" 
+                    default="['Name','Organization_Unit_Number__c','Organization_Unit_Sub_Type__c',
+                             'Parent_Organization_Unit__c','Company__c','Region__c','Organization_Unit_Type__c']" />
+    <aura:attribute name="orgUnitLabels" type="Object"/>
+    <aura:attribute name="isAsc" type="Boolean" default="false" description="Used for sorting"/>
+    <aura:attribute name="columnHeaderObjects" type="Object[]" />
+    <aura:attribute name="willHandleCompActions" type="String[]" default="['ADD_ORG_UNITS']" />
+    <aura:attribute name="isScriptLoaded" type="Boolean" default="false" description="Identifies whether the scripts are loaded"/>
+    <aura:attribute name="isDeleteModal" type="Boolean" default="false" />
+    
+    <aura:attribute name="selectedRow" type="String" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <!-- PUBLIC ATTRIBUTES END -->
+    
+    <!-- REGISTERED EVENTS -->
+    <!-- REGISTERED EVENTS END-->
+    
+    <!-- HANDLERS -->	
+    <aura:handler name="interactionCompEvent" event="c:interactionCompEvent" 
+                  action="{!c.handleInteractionCompEvent}" description=""/>
+    
+    <!-- HANDLERS END-->
+    
+    <!--AURA METHODS -->
+    <!--AURA METHODS END-->
+    
+    <!-- SERVICES / BACKGROUD COMPONENTS -->
+    <c:ObjectMetaDataService aura:id="objectMetadataService"/> 
+    <c:BudgetService aura:id="budgetService" />
+    <c:ApplicationSettingsService aura:id="applicationSettingsService" />
+    <!-- SERVICES / BACKGROUD COMPONENTS END-->
+    
+    <!-- MARK UP START-->
+    <aura:if isTrue="{!not(v.isAppPage)}">
+        <c:card  actionsType="button" icon="standard:partner_marketing_budget" 
+                iconSize="small" borderStyle="shadow" isLoading="{!v.isLoading}" showCardBorder="true" >
+            <aura:set attribute="customHeader">
+                <header heading="" 
+                        class="slds-media slds-p-vertical_xx-small slds-p-horizontal_xx-small slds-media_center 
+                               slds-has-flexi-truncate">
+                    <div class="slds-media__figure">
+                        <c:icon iconName="standard:partner_marketing_budget" size="small" />
+                    </div>
+                    <div class="ahm-card-heading_large_desktop slds-m-right_x-small">
+                        {!(v.alignOrgUnitToBudget.length>0) ? $Label.c.Budget_Access +'
+                        (' +v.alignOrgUnitToBudget.length +')': $Label.c.Budget_Access}
+                    </div>
+                </header>
+            </aura:set>  
+            <aura:set attribute="actions">
+                <lightning:button aura:id="addBudgetAccessId" label="{#$Label.c.Budget_Access_Add}"
+                                  class="{!equals(v.addOrganizationUnitActionVisibility, 'Show') ? '' : 
+                                         'slds-hide'}" iconName="utility:add" onclick="{!c.showBudgetAccessModal}" />
+            </aura:set>
+            
+            <aura:if isTrue="{!v.isScriptLoaded}">
+                <div class="slds-p-around_xx-small">
+                    <c:InstructionalText  instructionalTextVisibility="{#v.manageBudgetOrganizationUnitHelpTextVisibility}" 
+                                         instructionalTextTypeValue="{#v.manageBudgetOrganizationUnitHelpTextType}" 
+                                         instructionalTextFontWeight="Regular" 
+                                         instructionalTextBorderVisibility="Hide" 
+                                         bgColor="card"  isAppPage="false"/>
+                    
+                </div>
+            </aura:if>
+            
+            <aura:if isTrue="{!not(v.isLoading)}">
+                <!-- Table Start -->
+                <lightning:layoutItem flexibility="auto" class="slds-p-bottom_medium slds-p-top_small">
+                    
+                    <table aura:id="budgetAccessTable" role="grid" 
+                           class="slds-table slds-table_fixed-layout slds-table_bordered slds-no-row-hover">
+                        
+                        <thead>
+                            <tr>
+                                <aura:iteration items="{!v.columnHeaderObjects}" var="colHead">
+                                    <th class="slds-is-sortable slds-text-title_caps ahm-table-row-padding " 
+                                        scope="col" value="{!colHead.label}" >
+                                        <a href="javascript:void(0);" 
+                                           class="slds-th__action slds-text-link_reset" 
+                                           tabindex="-1" onclick="{!c.sort}"
+                                           id="{!colHead.path}" >
+                                            <span class="slds-truncate" title="{!colHead.label}">{!colHead.label}</span>
+                                            <lightning:icon iconName="{!v.isAsc==true ? 'utility:arrowdown' : 'utility:arrowup'}" 
+                                                            size="xx-small" class=" slds-icon slds-is-sortable__icon "  
+                                                            alternativeText="{!$Label.c.CC_Sort_By}" />
+                                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true"></span>
+                                        </a>
+                                    </th>
+                                </aura:iteration>
+                                <th scope="col" class="slds-size_1-of-12"> </th>
+                            </tr>
+                        </thead>
+                        
+                        <tbody aura:id="tableBody">
+                            <aura:iteration items="{!v.alignOrgUnitToDisplay}" var="orgUnit" indexVar="index">
+                                <tr class="slds-hint-parent slds-size_12-of-12">
+                                    
+                                    <td role="gridcell">
+                                        <!-- organizationUnit Name Div start -->
+                                        <div class="ahm-popover slds-m-left_x-small slds-m-top_x-small slds-is-relative">
+                                            <div class="slds-truncate">
+                                                <b>{!!empty(orgUnit.organizationUnit.Name) ? orgUnit.organizationUnit.Name : '-'}
+                                                </b></div>
+                                            <div class="{!empty(orgUnit.organizationUnit.Name) ? 
+                                                        'slds-hide' : 'ahm-Popover_body ahm-OrgName-bottom' }">
+                                                <div class="slds-nubbin_bottom slds-popover slds-popover_tooltip">
+                                                    <div class="slds-popover__body ">
+                                                        {!orgUnit.organizationUnit.Name} 
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- organizationUnit Name Div end -->
+                                        <!-- organizationUnit number Div start -->
+                                        <div class="ahm-popover slds-is-relative">
+                                            <div class="slds-p-left_x-small slds-truncate ahm-font-size">
+                                                {!!empty(orgUnit.organizationUnit.Organization_Unit_Number__c) ?
+                                                orgUnit.organizationUnit.Organization_Unit_Number__c : '-' }
+                                            </div>
+                                            <div class="{!empty(orgUnit.organizationUnit.Organization_Unit_Number__c) 
+                                                        ? 'slds-hide'
+                                                        : 'ahm-Popover_body ahm-orgUnitNumber-left' }">
+                                                <div class="slds-nubbin_bottom slds-popover slds-popover_tooltip">
+                                                    <div class="slds-popover__body ">
+                                                        {!orgUnit.organizationUnit.Organization_Unit_Number__c}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- organizationUnit number Div end  -->
+                                        <!-- Employee Name Div start -->
+                                        <div class="{!!empty(orgUnit.employeeList) ? 
+                                                    'slds-float_left slds-m-left_x-small ahm-employeeDivWidth'
+                                                    : 'slds-hide'}">
+                                            <div class="ahm-popover slds-is-relative">
+                                                <div class="slds-p-right_x-small slds-truncate ahm-font-size">
+                                                    {!orgUnit.organizationUnit.OrganizationUnitAssignments__r[0].Employee__r.Full_Name__c}
+                                                </div>
+                                                
+                                                <div class="ahm-Popover_body ahm-OrgEmpName-bottom">
+                                                    <div class="slds-nubbin_bottom slds-popover slds-popover_tooltip">
+                                                        <div class="slds-popover__body ">
+                                                            {!orgUnit.organizationUnit.OrganizationUnitAssignments__r[0].Employee__r.Full_Name__c }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Employee Name Div end -->
+                                        <!-- badge Div start -->
+                                        <div class="{!empty(orgUnit.employeeList) ? 'ahm-div-clear ahm-popover slds-is-relative 
+                                                    slds-m-left_x-small slds-p-top_xx-small 
+                                                    slds-p-bottom_x-small slds-list_horizontal' : 'slds-hide' }">
+                                            <div class="slds-truncate">
+                                                <c:strike_badge class="slds-float_right slds-truncate ahm-badge_padding 
+                                                                       ahm_badgeColor slds-is-relative" 
+                                                                label="{#$Label.c.Vacant}" />
+                                            </div>
+                                            <div class="ahm-Popover_body ahm-badge-bottom">
+                                                <div class="slds-nubbin_bottom slds-popover slds-popover_tooltip">
+                                                    <div class="slds-popover__body">
+                                                        <h4 class="slds-hyphenate slds-text-body_small ">
+                                                            {#$Label.c.Vacant}
+                                                        </h4>                                                      
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- badge Div end -->
+                                    </td>
+                                    
+                                    <td role="gridcell" class="slds-cell-wrap">
+                                        <div class="slds-p-left_x-small" 
+                                             title="{!orgUnit.organizationUnit.Parent_Organization_Unit__r.Name}">
+                                            {!!empty(orgUnit.organizationUnit.Parent_Organization_Unit__r.Name) ?
+                                            orgUnit.organizationUnit.Parent_Organization_Unit__r.Name : '-'}
+                                        </div>
+                                    </td>
+                                    
+                                    <td role="gridcell" class="slds-cell-wrap ">
+                                        <div class="slds-p-left_x-small" 
+                                             title="{!orgUnit.organizationUnit.Company__r.Name}">
+                                            {!!empty(orgUnit.organizationUnit.Company__r.Name) ? 
+                                            orgUnit.organizationUnit.Company__r.Name : '-'}
+                                        </div>
+                                    </td>
+                                    
+                                    <td role="gridcell" class="slds-cell-wrap">
+                                        <div class="slds-p-left_x-small" title="{!orgUnit.organizationUnit.Region__r.Name}">
+                                            {!!empty(orgUnit.organizationUnit.Region__r.Name) ?
+                                            orgUnit.organizationUnit.Region__r.Name : '-'}
+                                        </div>
+                                    </td>
+                                    
+                                    
+                                    <td role="gridcell" class="slds-cell-wrap">
+                                        <!--  Delete action div start  --> 
+                                        <div class="ahm-button-float slds-p-right_xx-large">
+                                            <lightning:buttonMenu iconSize="small" menuAlignment="right" class="">
+                                                <aura:if isTrue="{!equals(v.deleteOrganizationUnitActionVisibility, 'Show')}">
+                                                    <lightning:menuItem label="{#$Label.c.FM_GLOBAL_ACTION_TEXT_DELETE}"  
+                                                                        value="{!orgUnit.organizationUnit}" onactive="{!c.showDeleteModal}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:menuItem label="{#$Label.c.NO_ACTIONS_AVAILABLE_INFO}" disabled="true" />
+                                                    </aura:set>
+                                                </aura:if>
+                                            </lightning:buttonMenu>
+                                        </div> 
+                                        <!--  Delete action div end  --> 
+                                    </td>
+                                </tr>
+                                
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                    <!--  No record div start  --> 
+                    <div class="{!v.alignOrgUnitToBudget.length == 0 ? '' : 'slds-hide'}">
+                        <p class="slds-align_absolute-center slds-align-middle slds-p-vertical_x-large ahm-empty-tableBackground">
+                            {#$Label.c.CD_LBL_EstimatedRelatedList_No_Records} 
+                        </p>
+                    </div>
+                    <!--  No record div end  --> 
+                </lightning:layoutItem>
+                <!-- Table End-->
+                
+                <!-- VIEW ALL/ VIEW LESS START -->
+                <div class="{! and(!empty(v.alignOrgUnitToBudget),
+                            greaterthan(v.alignOrgUnitToBudget.length, v.defaultRecordSize)) 
+                            ? '' : 'slds-hide'}">
+                    <div class="slds-clearfix">
+                        <lightning:layoutItem flexibility="auto" class="">
+                            <div class="slds-align_absolute-center">
+                                <a href="javascript:void(0);" class="slds-text-link_reset">
+                                    <span id="activityViewAll" 
+                                          class="{!(and(!v.viewAllOrgUnit, 
+                                                 greaterthan(v.alignOrgUnitToBudget.length, v.defaultRecordSize))
+                                                 ? 'slds-text-link' : 'slds-hide')}" 
+                                          onclick="{!c.viewAll}"> 
+                                        {#$Label.c.VIEW_ALL_LBL} ({!v.alignOrgUnitToBudget.length})
+                                    </span>
+                                    <span id="activityViewLess" 
+                                          class="{!(and(v.viewAllOrgUnit,
+                                                 greaterthan(v.alignOrgUnitToBudget.length, v.defaultRecordSize))
+                                                 ? 'slds-text-link' : 'slds-hide')}" 
+                                          onclick="{!c.viewLess}"> 
+                                        {#$Label.c.VIEW_LESS_LBL} 
+                                    </span>
+                                </a>
+                            </div>
+                        </lightning:layoutItem>
+                    </div>
+                </div>  
+            </aura:if>
+        </c:card>
+        
+        <!-- VIEW ALL/ VIEW LESS END -->
+        <!--  SEARCH ADD ORG UNIT MODAL START -->
+        <aura:if isTrue="{!v.showSearchAddOrgUnitModal}">
+            <c:SearchSelectOrganization aura:id="searchAddOrgUnit"
+                                        showSearchAddOrgUnitModal="{!v.showSearchAddOrgUnitModal}"
+                                        searchOrganizationUnitHelpTextType="{#v.searchOrganizationUnitHelpTextType}"
+                                        searchOrganizationUnitHelpTextVisibility="{#v.searchOrganizationUnitHelpTextVisibility}"
+                                        orgUnitLabels="{#v.orgUnitLabels}"
+                                        budgetId="{#v.budgetId}"
+                                        pageSize="{#v.searchSettings.numberOfSearchResults}" 
+                                        minCharactersForSearch="{#v.searchSettings.minimumNumberOfCharactersForSearch}"    
+                                        context="BUDGET_ACCESS"/>
+        </aura:if>
+        <!--  SEARCH ADD ORG UNIT MODAL END -->
+        <!-- DELETE MODAL START -->
+        <aura:if isTrue="{!v.isDeleteModal}" >
+            <section role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header slds-text-heading_small slds-p-around_medium">
+                        {!$Label.c.FM_GLOBAL_ACTION_TEXT_DELETE}
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium slds-text-align_center">
+                        <div class="detail slds-text-align_center">
+                            <lightning:icon iconName="utility:delete" size="medium" class="ahm-DeleteIconBackgroundColor"/>
+                            <div class="slds-p-top_small">
+                                {! $Label.c.FM_MESSAGE_CONFIRMATION_TEXT_REMOVE_MESSAGE}
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <span class="{!v.showSpinner? 'slds-hide' : 'slds-show'}">
+                            <button class="slds-button slds-button_neutral" onclick="{!c.hideModal}">
+                                {!$Label.c.Cancel_Button}
+                            </button>
+                            <button class="slds-button slds-button_destructive" onclick="{!c.deleteOrgUnit}">
+                                {!$Label.c.FM_GLOBAL_ACTION_TEXT_DELETE}
+                            </button>
+                        </span>
+                        <div class="{!v.showSpinner ? 'slds-is-relative slds-p-around_medium slds-float_right':'slds-hide'}">
+                            <lightning:spinner class="ahm-Spinner-Background" variant="brand" size="small"/>
+                        </div>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </aura:if>
+        
+        <!-- DELETE MODAL END -->
+        <aura:set attribute="else">
+            <div class="slds-box">
+                <span class="slds-text-heading_large slds-m-around_x-small">{!v.componentName}</span>
+            </div>
+        </aura:set>
+        
+    </aura:if>
+    <!-- MARK UP END-->
+</aura:component>

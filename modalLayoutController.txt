@@ -1,0 +1,56 @@
+({
+    onScriptsLoaded : function(component, event, helper) {
+        component.set('v.isScriptLoaded', true);
+        helper.initData(component, event, helper);
+        
+    },
+    
+    showBudgetAccessModal : function(component, event, helper) {
+        document.body.setAttribute('style', 'overflow: hidden');
+        component.set('v.showSearchAddOrgUnitModal',true);
+    },
+    
+    viewAll: function( component, event, helper ) {
+        component.set( 'v.viewAllOrgUnit', true );
+        var recordsList = component.get( "v.alignOrgUnitToBudget" );
+        component.set( "v.alignOrgUnitToDisplay", recordsList );
+    },
+    
+    viewLess: function( component, event, helper ) {
+        component.set( 'v.viewAllOrgUnit', false );
+        helper.setBudgeOrgUnitToDisplay(component, helper);
+    },
+    
+    handleInteractionCompEvent: function( component, event, helper ) {
+        var action = event.getParam( 'action' );
+        var payload = event.getParam( 'payload' );
+        var willHandle = _.find( component.get( 'v.willHandleCompActions' ), function( a ) {
+            return a === action
+        });
+        if ($A.util.isEmpty( action ) || $A.util.isEmpty( willHandle ))
+            return;
+        
+        helper.handleCompEvent( component, event, helper );
+    },
+    
+    // sort: This method is called , if user click on the headers of the table,
+    // we are passing the sorting parameters through the header id:
+    sort: function( component, event, helper ) {
+        var whichOne = event.currentTarget.id;
+        helper.sort(component,event, helper);
+        helper.setBudgeOrgUnitToDisplay(component, helper);
+    },
+    
+    showDeleteModal : function(component, event, helper) {
+        helper.showDeleteModal(component, event, helper);
+    },
+    
+    hideModal : function(component, event, helper) {
+        helper.hideModal(component, event, helper);
+    },
+    
+    deleteOrgUnit : function(component, event, helper) {
+        component.set("v.showSpinner", true);
+        helper.deleteOrgUnitRecord(component, event, helper);
+    },
+})

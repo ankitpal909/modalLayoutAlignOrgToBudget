@@ -1,0 +1,17 @@
+({
+    hideModal : function( component, event, helper ){
+        var interactionCompEvent = component.getEvent("interactionCompEvent");
+        interactionCompEvent.setParams({
+            "action" : "HIDE_DELETE_MODEL"
+        });
+        interactionCompEvent.fire();
+    },
+    deleteRecord : function( component, event, helper ){
+        component.set("v.showSpinner", true);
+        var interactionCompEvent = component.getEvent("interactionCompEvent");
+        interactionCompEvent.setParams({
+            "action" : "DELETE_RECORDS"
+        });
+        interactionCompEvent.fire();
+    },
+})

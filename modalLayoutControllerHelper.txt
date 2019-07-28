@@ -1,0 +1,178 @@
+({
+    initData : function(component, event, helper) {
+        component.set('v.budgetId',component.get('v.recordId'));
+        helper.setIsAppPage(component, helper);
+        if(Boolean(component.get('v.isAppPage'))) return;
+        helper.checkInitialData(component,event,  helper);
+    },
+    
+    checkInitialData: function (component, event, helper) {
+        var orgUnitLabels = component.get('v.orgUnitLabels');
+        helper.getOrgUnitLabels(component, helper , helper.populateInitialData);
+        helper.getAlignOrgUnits(component, helper , helper.populateInitialData);
+        helper.getSearchSettings(component, helper, 'searchSettings', helper.populateInitialData);
+        
+        helper.populateInitialData( component, helper);
+    },
+    
+    populateInitialData: function( component, helper ) {
+        var orgUnitLabels = component.get('v.orgUnitLabels');
+        var alignOrgUnits = component.get('v.alignOrgUnitToBudget');
+        var searchSettings = component.get('v.searchSettings');
+        if($A.util.isUndefinedOrNull( orgUnitLabels ) || $A.util.isUndefinedOrNull( alignOrgUnits ) || $A.util.isEmpty(searchSettings))
+            return;
+        
+        helper.setBudgeOrgUnitToDisplay(component, helper);
+        helper.setColumnHeaderObjects(component, helper);
+        component.set( 'v.isLoading', false );
+    },
+    
+    handleCompEvent: function( component, event, helper ) {
+        var action = event.getParam('action');
+        var payload = event.getParam('payload');
+        switch (action) {
+            case 'ADD_ORG_UNITS':
+                component.set('v.alignOrgUnitToBudget', payload);
+                helper.setBudgeOrgUnitToDisplay(component, helper);
+                component.set('v.showSearchAddOrgUnitModal', false);
+                document.body.setAttribute('style', 'overflow: visible');
+                event.stopPropagation();     
+                break;
+            default:
+                break;
+        }
+    },
+    
+    setColumnHeaderObjects: function( component, helper ) {
+        var orgUnitLabels = component.get( 'v.orgUnitLabels' );
+        if ($A.util.isEmpty( orgUnitLabels ))
+            return;
+        
+        var columnHeaderObjects = [
+            {
+                path: 'organizationUnit.Name',
+                label: orgUnitLabels['Name'],
+                type: 'text'
+            }, {
+                path: 'organizationUnit.Parent_Organization_Unit__r.Name',
+                label: orgUnitLabels['Parent_Organization_Unit__c'],
+                type: 'text'
+            }, {
+                path: 'organizationUnit.Company__r.Name',
+                label: orgUnitLabels['Company__c'],
+                type: 'text'
+            }, {
+                path: 'organizationUnit.Region__r.Name',
+                label: orgUnitLabels['Region__c'],
+                type: 'text'
+            }
+        ];
+        component.set( 'v.columnHeaderObjects', columnHeaderObjects );
+    },
+    
+    getOrgUnitLabels: function( component, helper, callback) {
+        var orgUnitFieldsForLabels = component.get('v.orgUnitFieldsForLabels');
+        var fieldLabelJson = {};
+        
+        //Setting null values for labels
+        _.forEach(orgUnitFieldsForLabels, function(fieldApiName){
+            fieldLabelJson[fieldApiName] = null;
+        });
+        
+        var orgUnitFieldJson = [{ objectName: "Organization_Unit__c", fieldLabels: fieldLabelJson }];
+        var attributesWithPath = [{name: 'orgUnitLabels', path: { 'objectName': 'Organization_Unit__c' }}];
+        
+        helper.getLabels(component, helper, orgUnitFieldJson, attributesWithPath, callback);
+        component.get('v.orgUnitLabels');
+    },
+    
+    getAlignOrgUnits: function( component, helper, callback) {
+        var request = {
+            data: {
+                budgetId: component.get('v.budgetId')
+            }
+        };
+        var service = component.find('budgetService');
+        service.getBudgetOrganizationUnits(request, function(response) {
+            if (!response.success) {
+                helper.showToastMessages(response.messages);
+                return;
+            }
+            component.set('v.alignOrgUnitToBudget',  _.get(response, 'data.orgUnitAndEmployeeNames'));
+            callback(component, helper);
+        });
+    },
+    
+    deleteBudgetOrgUnit : function( component, helper, orgUnitIds ) {
+        var request = {
+            data: {
+                budgetId: component.get('v.budgetId'),
+                orgUnitIds : orgUnitIds,
+                returnRecords: true
+            }
+        };
+        var service = component.find('budgetService');
+        service.deleteBudgetOrganizationUnits(request, function(response) {
+            
+            if (!response.success) {
+                component.set("v.showSpinner", false);
+                component.set("v.isDeleteModal", false);
+                helper.showToastMessages(response.messages);
+                return;
+            }
+            component.set('v.alignOrgUnitToBudget', _.get(response, 'data.orgUnitAndEmployeeNames'));
+            helper.setBudgeOrgUnitToDisplay(component, helper);
+            component.set("v.showSpinner", false);
+            component.set("v.isDeleteModal", false);
+        });
+    },
+    
+    setBudgeOrgUnitToDisplay: function(component, helper) {
+        var budgetOrgUnits = component.get("v.alignOrgUnitToBudget");
+        var recordsToDisplay = _.cloneDeep(budgetOrgUnits);
+        var defaultRecordSize = component.get("v.defaultRecordSize");
+        if (!component.get("v.viewAllOrgUnit")) {
+            recordsToDisplay = _.slice(recordsToDisplay, 0, defaultRecordSize);
+        }
+        component.set("v.alignOrgUnitToDisplay", recordsToDisplay);
+    },
+    
+    sort: function( component, event, helper ) {
+        var currentOrder = component.get( "v.isAsc" );
+        var viewAll = component.get( "v.viewAllOrgUnit");
+        var currentList = _.cloneDeep(component.get( "v.alignOrgUnitToBudget" ));
+        var whichOne = event.currentTarget.id;
+        var equalVal, prevRecGrt;
+        currentOrder = !currentOrder;
+        currentList.sort( function( prevRecord, record ) {
+            equalVal = _.get( prevRecord, whichOne, '' ) === _.get( record, whichOne, '' );
+            prevRecGrt = _.get( prevRecord, whichOne, '' ) > _.get( record, whichOne, '' );
+            return equalVal
+            ? 0
+            : ( currentOrder
+               ? -1
+               : 1 ) * ( prevRecGrt
+                        ? 1
+                        : -1 );
+        });
+        component.set( "v.isAsc", currentOrder );
+        component.set( "v.alignOrgUnitToBudget", currentList );
+    },    
+    
+    showDeleteModal : function( component, event, helper ){
+        component.set("v.isDeleteModal", true);
+        //var selectedRow = event.getSource();
+        var selectedRowId = event.getSource().get("v.value").Id;
+        component.set("v.selectedRow", selectedRowId);
+    },
+    
+    hideModal : function( component, event, helper ){
+        component.set("v.isDeleteModal", false);
+    },
+    
+    deleteOrgUnitRecord : function( component, event, helper ){
+        var orgUnitIds = [];
+        orgUnitIds.push(component.get("v.selectedRow"));
+        helper.deleteBudgetOrgUnit(component, helper, orgUnitIds);
+    },
+})

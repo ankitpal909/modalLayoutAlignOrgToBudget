@@ -1,0 +1,9 @@
+({    
+    hideModal : function(component, event, helper) {
+        helper.hideModal(component, event, helper);
+    },
+    
+    deleteRecord : function(component, event, helper) {
+        helper.deleteRecord(component, event, helper);
+    },
+})

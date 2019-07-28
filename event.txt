@@ -1,0 +1,6 @@
+
+    <aura:registerEvent name="interactionCompEvent" type="c:interactionCompEvent" />	
+    <aura:handler name="interactionCompEvent" event="c:interactionCompEvent" 
+                  action="{!c.handleInteractionCompEvent}" description=""/>
+				  
+    <aura:registerEvent name="strike_evt_modalPrimaryButtonClicked" type="c:strike_evt"/>			  

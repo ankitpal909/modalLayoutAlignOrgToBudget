@@ -1,0 +1,50 @@
+<aura:component >
+    
+    <!--ATTRIBUTES ..-->
+    <aura:attribute name="modalHeader" type="String" />
+    <aura:attribute name="modalMessage" type="String" />
+    <aura:attribute name="primaryButton" type="String" />
+    <aura:attribute name="secondaryButton" type="String" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />    
+    <!--ATTRIBUTES ..-->
+    
+    <!--EVENT HANDLER ..-->
+    <aura:registerEvent name="interactionCompEvent" type="c:interactionCompEvent" />
+    <!--EVENT HANDLER ..-->
+    
+    <!--MARKUP ..-->
+    <section role="dialog" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header slds-text-heading_small slds-p-around_medium">
+                <div>
+                    {!empty(v.modalHeader) ? ($Label.c.FM_GLOBAL_ACTION_TEXT_DELETE) : v.modalHeader}
+                </div>
+            </header>
+            <div class="slds-modal__content slds-p-around_medium slds-text-align_center">
+                <div class="detail slds-text-align_center">
+                    <lightning:icon iconName="utility:delete" size="medium" class="ahm-DeleteIconBackgroundColor"/>
+                    <div class="slds-p-top_small">
+                        <div>
+                            {!empty(v.modalMessage) ? ($Label.c.FM_MESSAGE_CONFIRMATION_TEXT_REMOVE_MESSAGE) : v.modalMessage}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="slds-modal__footer">
+                <span class="{!v.showSpinner? 'slds-hide' : 'slds-show'}">
+                    <button class="slds-button slds-button_neutral" onclick="{!c.hideModal}">
+                        {!empty(v.primaryButton) ? $Label.c.Cancel_Button : v.primaryButton}
+                    </button>
+                    <button class="slds-button slds-button_destructive" onclick="{!c.deleteRecord}">
+                        {!empty(v.secondaryButton) ? $Label.c.FM_GLOBAL_ACTION_TEXT_DELETE : v.secondaryButton}
+                    </button>
+                </span>
+                <div class="{!v.showSpinner ? 'slds-is-relative slds-p-around_medium slds-float_right':'slds-hide'}">
+                    <lightning:spinner class="ahm-Spinner-Background" variant="brand" size="small"/>
+                </div>
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+    <!--MARKUP ..-->
+</aura:component>
